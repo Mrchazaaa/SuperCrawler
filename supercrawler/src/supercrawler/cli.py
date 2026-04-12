@@ -16,15 +16,20 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("url")
     parser.add_argument(
         "--debug",
-        action="store_true",
-        help="Enable debug logging.",
+        action="store_true"
+    )
+    parser.add_argument(
+        "--persist-logs",
+        action="store_true"
     )
     return parser.parse_args()
 
 
 def main() -> None:
     args = _parse_args()
-    configure_logging(level=logging.DEBUG if args.debug else logging.INFO)
+    configure_logging(
+        level=logging.DEBUG if args.debug else logging.INFO,
+        save_logs_to_file=True if args.persist_logs else False)
 
     url = args.url
     sub_domain_explorer = SubDomainExplorer(url)
@@ -35,5 +40,5 @@ def main() -> None:
         for page in results:
             print(page.url)
     except Exception as e:
-        logger.error("Crawl failed: %s", e)
+        logger.error_with_exception("Crawl failed", e)
         sys.exit(1)
