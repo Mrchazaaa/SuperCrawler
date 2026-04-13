@@ -112,3 +112,27 @@ def test_explore_surfaces_scraper_errors() -> None:
 
     with pytest.raises(RuntimeError, match="boom"):
         explorer.explore()
+
+
+def test_explore_retries_timeout_errors() -> None:
+    start_url = "https://example.com"
+
+    class TimeoutThenSuccessScraper:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def fetch_html(self, url: str) -> PageContent:
+            self.calls += 1
+
+            if self.calls < 3:
+                raise TimeoutError("timed out")
+
+            return PageContent([])
+
+    scraper = TimeoutThenSuccessScraper()
+    explorer = SubDomainExplorer(start_url, scraper=scraper)
+
+    results = explorer.explore()
+
+    assert [page.url for page in results] == [start_url]
+    assert scraper.calls == 3
