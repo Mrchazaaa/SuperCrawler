@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+import asyncio
+from collections.abc import Awaitable, Callable
 
-from supercrawler.common.operation_invoker import OperationInvoker
-from supercrawler.common.retryable_operation import RetryableOperation
+from supercrawler.common.bounded_async_work_scheduler import BoundedAsyncWorkScheduler
+from supercrawler.common.logger import get_logger
 from supercrawler.crawler.explore_url_operation import ExploreUrlOperation
 from supercrawler.model.page import Page
 from supercrawler.web.scraper import Scraper
+
+logger = get_logger(__name__)
 
 
 class ExploreUrlOperationFactory:
@@ -22,19 +25,56 @@ class ExploreUrlOperationFactory:
         self,
         target_url: str,
         base_url: str,
-        operation_invoker: OperationInvoker,
+        scheduler: BoundedAsyncWorkScheduler[None],
         scraper: Scraper,
         explored_pages: list[Page],
-    ) -> RetryableOperation[str]:
-        return RetryableOperation(
-            operation=ExploreUrlOperation(
-                target_url=target_url,
-                base_url=base_url,
-                operation_invoker=operation_invoker,
-                operation_factory=self,
-                scraper=scraper,
-                explored_pages=explored_pages,
-            ),
-            should_retry=self._should_retry,
-            retries=self._retries,
-        )
+        tracked_urls: set[str],
+        tracked_urls_lock: asyncio.Lock,
+    ) -> Callable[[], Awaitable[None]]:
+        async def run() -> None:
+            attempts_remaining = self._retries
+            attempt_number = 1
+
+            while True:
+                try:
+                    logger.debug(
+                        "Executing explore work for %s attempt %s",
+                        target_url,
+                        attempt_number,
+                    )
+                    await ExploreUrlOperation(
+                        target_url=target_url,
+                        base_url=base_url,
+                        scheduler=scheduler,
+                        operation_factory=self,
+                        scraper=scraper,
+                        explored_pages=explored_pages,
+                        tracked_urls=tracked_urls,
+                        tracked_urls_lock=tracked_urls_lock,
+                    ).run()
+                    return
+                except BaseException as error:
+                    should_retry = attempts_remaining > 0 and self._should_retry(error)
+
+                    if not should_retry:
+                        logger.warning(
+                            "Explore work for %s failed on attempt %s and will not be retried: %s: %s",
+                            target_url,
+                            attempt_number,
+                            type(error).__name__,
+                            error,
+                        )
+                        raise
+
+                    logger.warning(
+                        "Explore work for %s failed on attempt %s and will be retried (%s retries remaining): %s: %s",
+                        target_url,
+                        attempt_number,
+                        attempts_remaining,
+                        type(error).__name__,
+                        error,
+                    )
+                    attempts_remaining -= 1
+                    attempt_number += 1
+
+        return run

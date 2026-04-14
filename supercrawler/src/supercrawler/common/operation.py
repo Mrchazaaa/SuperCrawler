@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 
 TState = TypeVar("TState")
@@ -9,5 +9,5 @@ TState = TypeVar("TState")
 
 class Operation(ABC, Generic[TState]):
     @abstractmethod
-    def execute(self, state: TState) -> None:
+    async def execute(self, state: TState) -> Any:
         raise NotImplementedError

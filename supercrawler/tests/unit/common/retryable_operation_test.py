@@ -1,15 +1,17 @@
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
-from supercrawler.common import Operation, RetryableOperation
-
+from supercrawler.common.operation import Operation
+from supercrawler.common.retryable_operation import RetryableOperation
 
 class SuccessfulOperation(Operation[str]):
     def __init__(self) -> None:
         self.completed_states: list[str] = []
 
-    def execute(self, state: str) -> None:
+    async def execute(self, state: str) -> None:
         self.completed_states.append(state)
 
 
@@ -19,7 +21,7 @@ class FlakyOperation(Operation[str]):
         self.attempts = 0
         self.completed_states: list[str] = []
 
-    def execute(self, state: str) -> None:
+    async def execute(self, state: str) -> None:
         self.attempts += 1
 
         if self.attempts <= self.failures_before_success:
@@ -32,7 +34,7 @@ class ValueErrorOperation(Operation[str]):
     def __init__(self) -> None:
         self.attempts = 0
 
-    def execute(self, state: str) -> None:
+    async def execute(self, state: str) -> None:
         self.attempts += 1
         raise ValueError(f"invalid input: {state}")
 
@@ -45,7 +47,7 @@ def test_execute_returns_result_when_operation_succeeds() -> None:
         retries=3,
     )
 
-    operation.execute("work")
+    asyncio.run(operation.execute("work"))
 
     assert successful_operation.completed_states == ["work"]
 
@@ -59,7 +61,7 @@ def test_execute_retries_until_operation_succeeds() -> None:
         retries=2,
     )
 
-    operation.execute("work")
+    asyncio.run(operation.execute("work"))
 
     assert flaky_operation.attempts == 3
     assert flaky_operation.completed_states == ["work"]
@@ -75,7 +77,7 @@ def test_execute_raises_immediately_when_error_is_not_retryable() -> None:
     )
 
     with pytest.raises(ValueError, match="invalid input: work"):
-        operation.execute("work")
+        asyncio.run(operation.execute("work"))
 
     assert failing_operation.attempts == 1
 
@@ -90,7 +92,7 @@ def test_execute_raises_after_retry_limit_is_exhausted() -> None:
     )
 
     with pytest.raises(RuntimeError, match="temporary failure"):
-        operation.execute("work")
+        asyncio.run(operation.execute("work"))
 
     assert failing_operation.attempts == 3
 

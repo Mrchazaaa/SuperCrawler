@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
 import logging
-from pathlib import Path
-
 
 class SuperCrawlerLogger:
     def __init__(self, logger: logging.Logger):
@@ -31,15 +28,11 @@ class SuperCrawlerLogger:
         )
 
 
-def configure_logging(level: int = logging.INFO, save_logs_to_file: bool | None = False) -> None:
+def configure_logging(level: int = logging.INFO, logs_filepath: str | None = None) -> None:
     handlers: list[logging.Handler] = [logging.StreamHandler()]
 
-    if save_logs_to_file:
-        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        project_root = Path(__file__).resolve().parents[3]
-        log_path = project_root / "Logs" / f"supercrawler-{timestamp}.logs"
-        log_path.parent.mkdir(parents=True, exist_ok=True)
-        handlers.append(logging.FileHandler(log_path))
+    if logs_filepath is not None:
+        handlers.append(logging.FileHandler(logs_filepath))
 
     logging.basicConfig(
         level=level,

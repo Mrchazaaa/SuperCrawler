@@ -9,7 +9,7 @@ from supercrawler.common.operation_id import OperationId
 
 class OperationInvoker(ABC):
     @abstractmethod
-    def ScheduleOperation(
+    async def ScheduleOperation(
         self,
         operation: Operation[Any],
         state: Any,
@@ -18,5 +18,5 @@ class OperationInvoker(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def ExecuteOperations(self) -> None:
+    async def ExecuteOperations(self) -> None:
         raise NotImplementedError

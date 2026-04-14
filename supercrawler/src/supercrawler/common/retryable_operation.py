@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from supercrawler.common.logger import get_logger
 from supercrawler.common.operation import Operation
@@ -25,7 +25,7 @@ class RetryableOperation(Operation[TState]):
         self._should_retry = should_retry
         self._retries = retries
 
-    def execute(self, state: TState) -> None:
+    async def execute(self, state: TState) -> Any:
         attempts_remaining = self._retries
         attempt_number = 1
 
@@ -36,13 +36,12 @@ class RetryableOperation(Operation[TState]):
                     type(self._operation).__name__,
                     attempt_number,
                 )
-                self._operation.execute(state)
+                return await self._operation.execute(state)
                 logger.debug(
                     "Retryable operation %s succeeded on attempt %s",
                     type(self._operation).__name__,
                     attempt_number,
                 )
-                return
             except BaseException as error:
                 should_retry = attempts_remaining > 0 and self._should_retry(error)
 
