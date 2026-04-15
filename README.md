@@ -17,7 +17,25 @@
 
 Fetching -> Parsing -> Normalization -> Storing
 
+TODO:
+- implement multithreading
+- implement retry logic
+ - account for only trying up to X times and not giving job back to jobpool
+- implement json output
+- metrics?
+
 
 # Tools
 python3
 Poetry (package management)
+
+# Installation
+## From source:
+poetry run python main.py --debug "https://crawlme.monzo.com/"
+
+## CLI Installation:
+cd SuperCrawler/
+python3 -m venv .venv-cli-test
+source ./.venv-cli-test/bin/activate
+pip install .
+supercrawler https://example.com

@@ -57,15 +57,16 @@ def _is_page_link(href: str) -> bool:
 
 
 class Scraper:
-    async def fetch_html(self, url: str, timeout: float = 10.0) -> PageContent:
+    def __init__(self) -> None:
         ssl_context = ssl.create_default_context()
-        async with httpx.AsyncClient(
+        self._client = httpx.AsyncClient(
             follow_redirects=True,
-            timeout=timeout,
             verify=ssl_context,
-        ) as client:
-            response = await client.get(url)
-            response.raise_for_status()
+        )
+
+    async def fetch_html(self, url: str, timeout: float = 10.0) -> PageContent:
+        response = await self._client.get(url, timeout=timeout)
+        response.raise_for_status()
         try:
             html = response.text
         except UnicodeDecodeError as exc:
@@ -75,3 +76,6 @@ class Scraper:
         hrefs = re.findall(r'href=["\']([^"\']+)["\']', html)
         links = [href for href in hrefs if _is_page_link(href)]
         return PageContent(links)
+
+    async def close(self) -> None:
+        await self._client.aclose()

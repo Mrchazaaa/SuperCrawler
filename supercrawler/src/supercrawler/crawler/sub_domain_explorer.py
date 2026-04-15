@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 
 from httpx import ConnectTimeout, ReadTimeout
 
+from supercrawler.common.async_work_scheduler_interface import AsyncWorkSchedulerInterface
 from supercrawler.common.bounded_async_work_scheduler import BoundedAsyncWorkScheduler
 from supercrawler.common.logger import get_logger
 from supercrawler.crawler.explore_url_operation_factory import ExploreUrlOperationFactory
@@ -19,8 +20,8 @@ class SubDomainExplorer:
     def __init__(
         self,
         url: str,
-        scheduler: BoundedAsyncWorkScheduler[None] | None = None,
-        scraper: Scraper | None = None,
+        scheduler: AsyncWorkSchedulerInterface[None] | None = None,
+        scraper: Scraper = Scraper()
     ) -> None:
         self.url = url
         self.base_url = url
@@ -29,8 +30,8 @@ class SubDomainExplorer:
         self._exploration_results: list[PageExplorationResult] | None = None
         self._tracked_urls: set[str] = {self.base_url}
         self._tracked_urls_lock = asyncio.Lock()
-        self.scraper: Scraper = scraper or Scraper()
-        self.scheduler = scheduler or BoundedAsyncWorkScheduler(max_concurrency=1000)
+        self.scraper = scraper
+        self.scheduler = scheduler or BoundedAsyncWorkScheduler(10)
         self.operation_factory = ExploreUrlOperationFactory(
             should_retry=lambda error: isinstance(error, ConnectTimeout)
             or isinstance(error, ReadTimeout)
