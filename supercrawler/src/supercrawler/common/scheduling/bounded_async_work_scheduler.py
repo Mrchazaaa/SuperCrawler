@@ -5,9 +5,10 @@ from collections.abc import Awaitable, Callable
 from typing import Generic, TypeVar
 from uuid import uuid4
 
-from supercrawler.common.async_work_scheduler_interface import AsyncWorkSchedulerInterface
-from supercrawler.common.work_id import WorkId
-from supercrawler.common.work_outcome import WorkOutcome
+from supercrawler.common.scheduling.async_work_scheduler_interface import AsyncWorkSchedulerInterface
+from supercrawler.common.scheduling.operation_already_tracked_error import OperationAlreadyTrackedError
+from supercrawler.common.scheduling.work_id import WorkId
+from supercrawler.common.scheduling.work_outcome import WorkOutcome
 
 
 TResult = TypeVar("TResult")
@@ -18,6 +19,7 @@ class BoundedAsyncWorkScheduler(AsyncWorkSchedulerInterface[TResult], Generic[TR
         self._max_concurrency = max_concurrency
         self._queue: asyncio.Queue[tuple[WorkId, Callable[[], Awaitable[TResult]]] | None] = asyncio.Queue()
         self._lock = asyncio.Lock()
+        self._tracked_work_ids: set[WorkId] = set()
         self._results_by_id: dict[WorkId, WorkOutcome[TResult]] = {}
         self._wait_task: asyncio.Task[dict[WorkId, WorkOutcome[TResult]]] | None = None
 
@@ -27,6 +29,13 @@ class BoundedAsyncWorkScheduler(AsyncWorkSchedulerInterface[TResult], Generic[TR
         work_id: WorkId | None = None,
     ) -> WorkId:
         resolved_work_id = work_id or str(uuid4())
+
+        async with self._lock:
+            if resolved_work_id in self._tracked_work_ids:
+                raise OperationAlreadyTrackedError(resolved_work_id)
+
+            self._tracked_work_ids.add(resolved_work_id)
+
         await self._queue.put((resolved_work_id, work))
         return resolved_work_id
 

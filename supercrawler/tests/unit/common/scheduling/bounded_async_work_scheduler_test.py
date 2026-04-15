@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import asyncio
 
-from supercrawler.common.bounded_async_work_scheduler import BoundedAsyncWorkScheduler
+import pytest
+
+from supercrawler.common.scheduling.bounded_async_work_scheduler import BoundedAsyncWorkScheduler
+from supercrawler.common.scheduling.operation_already_tracked_error import OperationAlreadyTrackedError
 
 
 def test_wait_for_all_continues_with_work_scheduled_during_execution() -> None:
@@ -98,6 +101,24 @@ def test_wait_for_all_records_errors_without_raising() -> None:
         assert outcomes_by_id[work_id].value is None
         assert isinstance(outcomes_by_id[work_id].error, RuntimeError)
         assert str(outcomes_by_id[work_id].error) == "failed:first"
+
+    asyncio.run(run_test())
+
+
+def test_schedule_raises_when_work_id_has_already_been_tracked() -> None:
+    async def run_test() -> None:
+        scheduler = BoundedAsyncWorkScheduler[str](max_concurrency=1)
+
+        async def first_work() -> str:
+            return "first"
+
+        async def duplicate_work() -> str:
+            return "duplicate"
+
+        await scheduler.schedule(first_work, work_id="first")
+
+        with pytest.raises(OperationAlreadyTrackedError, match="first"):
+            await scheduler.schedule(duplicate_work, work_id="first")
 
     asyncio.run(run_test())
 

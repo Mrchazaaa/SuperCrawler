@@ -4,8 +4,8 @@ from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
 from typing import Generic, TypeVar
 
-from supercrawler.common.work_id import WorkId
-from supercrawler.common.work_outcome import WorkOutcome
+from supercrawler.common.scheduling.work_id import WorkId
+from supercrawler.common.scheduling.work_outcome import WorkOutcome
 
 
 TResult = TypeVar("TResult")

@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from supercrawler.common.bounded_async_work_scheduler import BoundedAsyncWorkScheduler
+from supercrawler.common.scheduling.bounded_async_work_scheduler import BoundedAsyncWorkScheduler
 from supercrawler.crawler.explore_url_operation_factory import ExploreUrlOperationFactory
 from supercrawler.model.page import Page
 from supercrawler.model.page_content import PageContent
@@ -60,10 +60,11 @@ def test_create_retries_explore_work() -> None:
         tracked_urls_lock=asyncio.Lock(),
     )
 
-    asyncio.run(work())
+    page = asyncio.run(work())
 
     assert scraper.calls == 2
     assert [page.url for page in explored_pages] == ["https://example.com"]
+    assert page is explored_pages[0]
 
 
 def test_create_preserves_failure_when_error_is_not_retryable() -> None:

@@ -9,7 +9,7 @@
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/supercrawler/main.py",
-            "args": ["--debug", "--persist-logs", "https://crawlme.monzo.com/"],
+            "args": ["https://crawlme.monzo.com/"],
             "cwd": "${workspaceFolder}/supercrawler",
             "console": "integratedTerminal"
         },
