@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import uuid
 
 import pytest
 
@@ -8,42 +9,45 @@ from supercrawler.common.scheduling.bounded_async_work_scheduler import BoundedA
 from supercrawler.common.scheduling.operation_already_tracked_error import OperationAlreadyTrackedError
 
 
-def test_wait_for_all_continues_with_work_scheduled_during_execution() -> None:
+def test_execute_continues_with_work_scheduled_during_execution() -> None:
     async def run_test() -> None:
         execution_log: list[str] = []
         scheduler = BoundedAsyncWorkScheduler[str](max_concurrency=1)
 
+        id3 = str(uuid.uuid4())
         async def third_work() -> str:
-            execution_log.append("work:third")
-            return "third"
+            execution_log.append(id3)
+            return id3
 
+        id1 = str(uuid.uuid4())
         async def first_work() -> str:
-            execution_log.append("work:first")
-            await scheduler.schedule(third_work, work_id="third")
-            return "first"
+            execution_log.append(id1)
+            await scheduler.schedule(third_work, work_id=id3)
+            return id1
 
+        id2 = str(uuid.uuid4())
         async def second_work() -> str:
-            execution_log.append("work:second")
-            return "second"
+            execution_log.append(id2)
+            return id2
 
-        first_work_id = await scheduler.schedule(first_work, work_id="first")
-        second_work_id = await scheduler.schedule(second_work, work_id="second")
+        await scheduler.schedule(first_work, work_id=id1)
+        await scheduler.schedule(second_work, work_id=id2)
 
         outcomes_by_id = await scheduler.execute()
 
         assert execution_log == [
-            "work:first",
-            "work:second",
-            "work:third",
+            id1,
+            id2,
+            id3,
         ]
-        assert outcomes_by_id[first_work_id].value == "first"
-        assert outcomes_by_id[second_work_id].value == "second"
-        assert outcomes_by_id["third"].value == "third"
+        assert outcomes_by_id[id1].value == id1
+        assert outcomes_by_id[id2].value == id2
+        assert outcomes_by_id[id3].value == id3
 
     asyncio.run(run_test())
 
 
-def test_wait_for_all_runs_up_to_configured_parallelism() -> None:
+def test_execute_runs_up_to_configured_parallelism() -> None:
     async def run_test() -> None:
         active_counts: list[int] = []
         state_by_task: dict[str, str] = {}
@@ -87,7 +91,7 @@ def test_wait_for_all_runs_up_to_configured_parallelism() -> None:
     asyncio.run(run_test())
 
 
-def test_wait_for_all_records_errors_without_raising() -> None:
+def test_execute_records_errors_without_raising() -> None:
     async def run_test() -> None:
         scheduler = BoundedAsyncWorkScheduler[str](max_concurrency=1)
 
@@ -122,7 +126,7 @@ def test_schedule_raises_when_work_id_has_already_been_tracked() -> None:
 
     asyncio.run(run_test())
 
-def test_wait_for_all_returns_same_result_when_already_running() -> None:
+def test_execute_returns_same_result_when_already_running() -> None:
     async def run_test() -> None:
         scheduler = BoundedAsyncWorkScheduler[str](max_concurrency=1)
         release_event = asyncio.Event()

@@ -65,6 +65,31 @@ def test_fetch_html_extracts_only_page_links() -> None:
     mock_client.get.assert_awaited_once_with("https://example.com", timeout=10.0)
 
 
+def test_fetch_html_reuses_long_lived_http_client_across_calls() -> None:
+    with patch(
+        "supercrawler.web.scraper.httpx.AsyncClient"
+    ) as mock_async_client:
+        mock_client = AsyncMock()
+        mock_client.get.side_effect = [
+            FakeResponse('<a href="/first">First</a>'),
+            FakeResponse('<a href="/second">Second</a>'),
+        ]
+        mock_async_client.return_value = mock_client
+
+        scraper = Scraper()
+
+        first_result = asyncio.run(scraper.fetch_html("https://example.com/one"))
+        second_result = asyncio.run(scraper.fetch_html("https://example.com/two"))
+
+    assert first_result == PageContent(["/first"])
+    assert second_result == PageContent(["/second"])
+    mock_async_client.assert_called_once()
+    assert mock_client.get.await_args_list == [
+        (( "https://example.com/one",), {"timeout": 10.0}),
+        (( "https://example.com/two",), {"timeout": 10.0}),
+    ]
+
+
 def test_fetch_html_raises_value_error_for_invalid_charset() -> None:
     with patch(
         "supercrawler.web.scraper.httpx.AsyncClient"

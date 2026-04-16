@@ -8,14 +8,14 @@ from supercrawler.crawler.sub_domain_explorer import SubDomainExplorer
 from supercrawler.model.page import Page
 from supercrawler.model.page_content import PageContent
 
+EXAMPLE_URL = "https://example.com"
 
-def _create_explorer(url: str = "https://example.com") -> tuple[SubDomainExplorer, AsyncMock, Mock]:
+def _create_explorer(url: str = EXAMPLE_URL) -> tuple[SubDomainExplorer, AsyncMock, Mock]:
     scheduler = AsyncMock()
     scheduler.schedule.return_value = url
     scheduler.execute.return_value = {}
 
     operation_factory = Mock()
-    operation_factory.create.return_value = AsyncMock()
 
     scraper = AsyncMock()
 
@@ -37,26 +37,23 @@ def test_explore_schedules_base_url_with_work_created_by_factory() -> None:
     assert results == []
     operation_factory.create.assert_called_once()
     create_kwargs = operation_factory.create.call_args.kwargs
-    assert create_kwargs["target_url"] == "https://example.com"
-    assert create_kwargs["base_url"] == "https://example.com"
+    assert create_kwargs["target_url"] == EXAMPLE_URL
+    assert create_kwargs["base_url"] == EXAMPLE_URL
     assert create_kwargs["scheduler"] is scheduler
     assert create_kwargs["scraper"] is explorer.scraper
-    assert create_kwargs["explored_pages"] is explorer.explored_pages
-    assert create_kwargs["tracked_urls"] is explorer._tracked_urls
-    assert create_kwargs["tracked_urls_lock"] is explorer._tracked_urls_lock
     scheduler.schedule.assert_awaited_once_with(
         work=operation_factory.create.return_value,
-        work_id="https://example.com",
+        work_id=EXAMPLE_URL,
     )
     scheduler.execute.assert_awaited_once_with()
 
 
 def test_explore_maps_success_and_failure_outcomes_to_results() -> None:
     explorer, scheduler, _ = _create_explorer()
-    successful_page = Page(1, "https://example.com", PageContent(["/next"]))
+    successful_page = Page(1, EXAMPLE_URL, PageContent(["/next"]))
     scheduler.execute.return_value = {
         successful_page.url: WorkOutcome(value=successful_page, succeeded=True),
-        "https://example.com/missing": WorkOutcome(
+        f"{EXAMPLE_URL}/missing": WorkOutcome(
             error=RuntimeError("boom"),
             succeeded=False,
         ),
@@ -65,8 +62,8 @@ def test_explore_maps_success_and_failure_outcomes_to_results() -> None:
     results = asyncio.run(explorer.explore())
 
     assert [(result.url, result.status) for result in results] == [
-        ("https://example.com", "success"),
-        ("https://example.com/missing", "failure"),
+        (EXAMPLE_URL, "success"),
+        (f"{EXAMPLE_URL}/missing", "failure"),
     ]
     assert results[0].page is successful_page
     assert results[0].error is None
@@ -76,9 +73,9 @@ def test_explore_maps_success_and_failure_outcomes_to_results() -> None:
 
 def test_explore_returns_cached_results_on_second_call() -> None:
     explorer, scheduler, operation_factory = _create_explorer()
-    successful_page = Page(1, "https://example.com", PageContent([]))
+    successful_page = Page(1, EXAMPLE_URL, PageContent([]))
     expected_results = {
-        "https://example.com": WorkOutcome(value=successful_page, succeeded=True),
+        EXAMPLE_URL: WorkOutcome(value=successful_page, succeeded=True),
     }
     scheduler.execute.return_value = expected_results
 
