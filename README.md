@@ -1,41 +1,58 @@
-# Requirements:
-- Given a starting URL, the crawler should visit each URL it finds on the same domain.
-- It should print each URL visited, and a list of links found on that page.
-- The crawler should be limited to one subdomain - so when you start with *https://crawlme.monzo.com/*, it would crawl all pages on the crawlme.monzo.com website, but not follow external links,
+# SuperCrawler
+This project crawls a starting URL and recursively discovers pages linked within the same subdomain.
 
-- Needs to handle recursive links.
-- Needs tests
-- Should optimize for concurrency.
-- Should be efficient.
-- Should have throttling.
-- Should consider retries and timeouts.
-- How will the site handle JS?
-- Storage? Output format? In memory JSON?
-- Trigger (manually vs live incremental updates)
-- URL normalization
-- Observability stack (logging)
+https://github.com/Mrchazaaa/SuperCrawler
 
-Fetching -> Parsing -> Normalization -> Storing
-
-TODO:
-- implement multithreading
-- implement retry logic
- - account for only trying up to X times and not giving job back to jobpool
-- implement json output
-- metrics?
-
-
-# Tools
-python3
-Poetry (package management)
-
-# Installation
-## From source:
-poetry run python main.py --debug "https://crawlme.monzo.com/"
+# Usage
 
 ## CLI Installation:
-cd SuperCrawler/
-python3 -m venv .venv-cli-test
-source ./.venv-cli-test/bin/activate
+```bash
+cd supercrawler/
+python3 -m venv .venv-cli
+source ./.venv-cli/bin/activate
 pip install .
-supercrawler https://example.com
+supercrawler "https://crawlme.monzo.com"
+```
+
+Optional arguments:
+```bash
+supercrawler --max-concurrency=10 "https://crawlme.monzo.com" > ./output.json
+supercrawler --log-level=INFO "https://crawlme.monzo.com" > ./output.json
+supercrawler --persist-logs "https://crawlme.monzo.com" > ./output.json
+```
+
+
+## Module Import:
+```bash
+cd supercrawler/
+poetry install
+poetry run python
+```
+
+Synchronous example:
+```python
+from supercrawler import explore_domain
+results = explore_domain("https://crawlme.monzo.com")
+```
+
+Asynchronous example:
+```python
+import asyncio
+from supercrawler import explore_domain_async
+
+results = asyncio.run(explore_domain_async("https://crawlme.monzo.com"))
+```
+
+
+## From source:
+```bash
+cd supercrawler/
+poetry run python main.py "https://crawlme.monzo.com/"
+```
+
+Optional arguments:
+```bash
+poetry run python main.py --max-concurrency=10 "https://crawlme.monzo.com" > ./output.json
+poetry run python main.py --log-level=INFO "https://crawlme.monzo.com" > ./output.json
+poetry run python main.py --persist-logs "https://crawlme.monzo.com" > ./output.json
+```
