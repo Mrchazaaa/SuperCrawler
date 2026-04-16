@@ -47,6 +47,7 @@ results = asyncio.run(explore_domain_async("https://crawlme.monzo.com"))
 ## From source:
 ```bash
 cd supercrawler/
+poetry install
 poetry run python main.py "https://crawlme.monzo.com/"
 ```
 
@@ -55,4 +56,10 @@ Optional arguments:
 poetry run python main.py --max-concurrency=10 "https://crawlme.monzo.com" > ./output.json
 poetry run python main.py --log-level=INFO "https://crawlme.monzo.com" > ./output.json
 poetry run python main.py --persist-logs "https://crawlme.monzo.com" > ./output.json
+```
+
+# Running automated tests
+```bash
+poetry install
+poetry run pytest
 ```
